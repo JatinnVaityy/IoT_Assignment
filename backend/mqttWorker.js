@@ -23,13 +23,6 @@ client.on('connect', () => {
   });
 });
 
-// Decode little-endian float from integer
-function decodeLEFloat(val) {
-  const buf = Buffer.alloc(4);
-  buf.writeUInt32LE(val);
-  return buf.readFloatLE(0);
-}
-
 // Handle incoming MQTT messages
 client.on('message', async (topic, message) => {
   if (!running) return;
@@ -38,9 +31,10 @@ client.on('message', async (topic, message) => {
     const payload = JSON.parse(message.toString());
     const { uid, fw, tts, data } = payload;
 
-    const temp = decodeLEFloat(data.temp);
-    const hum = decodeLEFloat(data.hum);
-    const pm25 = decodeLEFloat(data.pm25);
+    // --- SCALE RAW SENSOR VALUES ---
+    const temp = data.temp / 10000000;   // Temperature in °C
+    const hum = data.hum / 100000000;    // Humidity in %
+    const pm25 = data.pm25 / 100;        // PM2.5 in µg/m³
 
     // Save or update device
     const device = await Device.findOneAndUpdate(
@@ -59,7 +53,7 @@ client.on('message', async (topic, message) => {
       serverTs: new Date()
     });
 
-    // Emit to frontend
+    // Emit to frontend via Socket.io
     if (io) {
       io.emit('telemetry', {
         deviceUid: uid,
@@ -73,7 +67,7 @@ client.on('message', async (topic, message) => {
   }
 });
 
-// Publish test messages in **assignment format**
+// --- Test publisher ---
 function startTestPublisher() {
   if (interval) return;
 
@@ -84,9 +78,9 @@ function startTestPublisher() {
       fw: '1.0.0.0',
       tts: Math.floor(Date.now() / 1000),
       data: {
-        temp: 528857921,       // raw little-endian integer
-        hum: 1726382658,       // raw little-endian integer
-        pm25: 16449            // raw little-endian integer
+        temp: 528857921,       // raw integer
+        hum: 1726382658,       // raw integer
+        pm25: 16449            // raw integer
       }
     };
     client.publish(`/application/out/${DEVICE_UID}`, JSON.stringify(msg));
@@ -98,7 +92,7 @@ function startTestPublisher() {
 function start() {
   running = true;
   console.log('MQTT worker started');
-  startTestPublisher(); // sends raw assignment payload
+  startTestPublisher(); // sends test payload
 }
 
 // Stop MQTT worker
