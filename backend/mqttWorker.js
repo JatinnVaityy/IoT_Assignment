@@ -67,22 +67,28 @@ client.on('message', async (topic, message) => {
   }
 });
 
-// --- Test publisher ---
+// --- Test publisher with random variation ---
 function startTestPublisher() {
   if (interval) return;
 
   interval = setInterval(() => {
     const DEVICE_UID = '123456';
+    const baseTemp = 528857921;
+    const baseHum = 1726382658;
+    const basePM25 = 16449;
+
+    // Add small random variations
     const msg = {
       uid: DEVICE_UID,
       fw: '1.0.0.0',
       tts: Math.floor(Date.now() / 1000),
       data: {
-        temp: 528857921,       // raw integer
-        hum: 1726382658,       // raw integer
-        pm25: 16449            // raw integer
+        temp: baseTemp + Math.floor(Math.random() * 50000),   // vary temp
+        hum: baseHum + Math.floor(Math.random() * 100000),    // vary hum
+        pm25: basePM25 + Math.floor(Math.random() * 1000)     // vary pm2.5
       }
     };
+
     client.publish(`/application/out/${DEVICE_UID}`, JSON.stringify(msg));
     console.log('Test MQTT message published:', msg);
   }, 5000);
