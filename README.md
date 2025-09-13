@@ -56,11 +56,13 @@ A **test publisher** is included that generates random telemetry every **5 secon
 ### 1️⃣ Clone the repository
 
 git clone https://github.com/JatinnVaityy/IoT_Assignment.git
+
 cd IoT_Assignment
 
 ### 2️⃣ Backend Setup
 
 cd backend
+
 npm install
 
 Create .env file:
