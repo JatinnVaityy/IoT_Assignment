@@ -24,26 +24,6 @@ Use the following credentials to log in and explore the system:
 - **Password:** `testuser`  
 
 
-## 📂 Project Structure
-iot-platform-sim/
-│── backend/
-│ ├── models/ # Mongoose schemas (Device, Telemetry, User)
-│ ├── routes/ # Express routes (auth, devices)
-│ ├── middleware/ # JWT authentication middleware
-│ ├── mqttWorker.js # MQTT subscriber & test publisher
-│ └── server.js # Express + Socket.io + MongoDB
-│
-│── frontend/
-│ ├── src/
-│ │ ├── pages/ # Login, Devices list
-│ │ ├── components/ # DeviceCard, Modal, Charts
-│ │ ├── services/ # API + Socket client
-│ │ └── App.jsx
-│ └── vite.config.js
-│
-│── README.md
-
-
 ## 🚀 Features
 ✅ **Authentication** (JWT)  
 ✅ **Device APIs**
@@ -78,7 +58,7 @@ A **test publisher** is included that generates random telemetry every **5 secon
 git clone https://github.com/JatinnVaityy/IoT_Assignment.git
 cd IoT_Assignment
 
-###2️⃣ Backend Setup
+### 2️⃣ Backend Setup
 
 cd backend
 npm install
@@ -93,7 +73,7 @@ Run backend:
 node server.js
 Backend runs at: http://localhost:5000
 
-###3️⃣ Frontend Setup
+### 3️⃣ Frontend Setup
 
 cd frontend
 npm install
