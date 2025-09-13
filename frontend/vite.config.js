@@ -12,4 +12,9 @@ export default defineConfig({
   server: {
     port: 5173,
   },
+  // 👇 Add this
+  build: {
+    outDir: "dist",
+  },
+  base: "/", // ensures correct routing on Vercel
 });
