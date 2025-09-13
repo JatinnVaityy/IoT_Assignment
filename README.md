@@ -64,25 +64,32 @@ cd backend
 npm install
 
 Create .env file:
+
 MONGO_URI=mongodb://localhost:27017/iot
 JWT_SECRET=your_jwt_secret
 PORT=5000
 MQTT_BROKER_URL=mqtt://test.mosquitto.org:1883
 
 Run backend:
+
 node server.js
+
 Backend runs at: http://localhost:5000
 
 ### 3️⃣ Frontend Setup
 
 cd frontend
+
 npm install
+
 npm run dev
+
 Frontend runs at: http://localhost:5173
 
 
 
-###📦 Deployment
+### 📦 Deployment
+
 Backend (Render): https://iot-assignment-qg11.onrender.com
 
 Frontend (Vercel): https://iot-assignment-iota.vercel.app
