@@ -1,4 +1,3 @@
-// DeviceHistory.jsx (full file replacement — paste this over your current file)
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { Line } from 'react-chartjs-2';
@@ -16,7 +15,7 @@ import { socket } from '../services/socket';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
 
-export default function DeviceHistory({ deviceId, deviceUid }) {
+export default function DeviceHistory({ deviceId }) {
   const [data, setData] = useState({
     labels: [],
     temps: [],
@@ -25,10 +24,11 @@ export default function DeviceHistory({ deviceId, deviceUid }) {
   });
   const [loading, setLoading] = useState(true);
 
+  // Helper to format floats safely
   const formatVal = (val) =>
     val != null && !isNaN(val) ? Number(val).toFixed(2) : null;
 
-  // Load initial last 10 readings (deviceId is the DB id used by REST)
+  // Load initial last 10 readings
   useEffect(() => {
     if (!deviceId) return;
 
@@ -50,20 +50,15 @@ export default function DeviceHistory({ deviceId, deviceUid }) {
       .finally(() => setLoading(false));
   }, [deviceId]);
 
-  // Real-time updates — use deviceUid (not deviceId) to match socket payloads
+  // Real-time updates
   useEffect(() => {
-    if (!deviceUid) return;
-
     const handleTelemetry = (payload) => {
-      // payload.deviceUid should be raw uid string from MQTT decoding
-      if (payload.deviceUid !== deviceUid) return;
+      if (payload.deviceUid !== deviceId) return;
 
       setData(prev => {
         const updateArray = (arr, value) => [...arr.slice(-9), formatVal(value)];
-        const newLabel = new Date(payload.telemetry.serverTs).toLocaleTimeString();
-
         return {
-          labels: updateArray(prev.labels, newLabel),
+          labels: updateArray(prev.labels, new Date(payload.telemetry.serverTs).toLocaleTimeString()),
           temps: updateArray(prev.temps, payload.telemetry.temp),
           hums: updateArray(prev.hums, payload.telemetry.hum),
           pm25s: updateArray(prev.pm25s, payload.telemetry.pm25)
@@ -73,7 +68,7 @@ export default function DeviceHistory({ deviceId, deviceUid }) {
 
     socket.on('telemetry', handleTelemetry);
     return () => socket.off('telemetry', handleTelemetry);
-  }, [deviceUid]);
+  }, [deviceId]);
 
   if (loading) return <div className="text-sm text-gray-500">Loading history...</div>;
   if (!data.labels.length) return <div className="text-sm text-gray-500">No history available</div>;
@@ -81,9 +76,33 @@ export default function DeviceHistory({ deviceId, deviceUid }) {
   const chartData = {
     labels: data.labels,
     datasets: [
-      { label: 'Temperature (°C)', data: data.temps, tension: 0.4, pointRadius: 4 },
-      { label: 'Humidity (%)', data: data.hums, tension: 0.4, pointRadius: 4 },
-      { label: 'PM2.5', data: data.pm25s, tension: 0.4, pointRadius: 4 }
+      {
+        label: 'Temperature (°C)',
+        data: data.temps,
+        borderColor: 'rgba(255, 99, 132, 0.9)',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      },
+      {
+        label: 'Humidity (%)',
+        data: data.hums,
+        borderColor: 'rgba(54, 162, 235, 0.9)',
+        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      },
+      {
+        label: 'PM2.5',
+        data: data.pm25s,
+        borderColor: 'rgba(75, 192, 192, 0.9)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }
     ]
   };
 
@@ -91,12 +110,23 @@ export default function DeviceHistory({ deviceId, deviceUid }) {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: { position: 'top' },
+      legend: {
+        position: 'top',
+        labels: { font: { size: 14 } }
+      },
       tooltip: { mode: 'index', intersect: false },
-      title: { display: true, text: 'Device Telemetry (Last 10 readings)' }
+      title: { display: true, text: 'Device Telemetry (Last 10 readings)', font: { size: 16 } }
     },
     interaction: { mode: 'index', intersect: false },
-    scales: { y: { beginAtZero: true }, x: { } }
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Values', font: { size: 14 } }
+      },
+      x: {
+        title: { display: true, text: 'Time', font: { size: 14 } }
+      }
+    }
   };
 
   return (
