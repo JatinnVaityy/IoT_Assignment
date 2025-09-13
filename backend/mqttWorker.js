@@ -1,8 +1,8 @@
-const mqtt = require('mqtt');
-const Device = require('./models/Device');
-const Telemetry = require('./models/Telemetry');
+const mqtt = require("mqtt");
+const Device = require("./models/Device");
+const Telemetry = require("./models/Telemetry");
 
-const broker = 'mqtt://broker.hivemq.com';
+const broker = "mqtt://broker.hivemq.com";
 const client = mqtt.connect(broker);
 
 let running = false;
@@ -14,27 +14,40 @@ function init(socketIo) {
   io = socketIo;
 }
 
+// --- Helpers to encode/decode floats ---
+function encodeFloatLE(value) {
+  const buf = Buffer.alloc(4);
+  buf.writeFloatLE(value, 0);
+  return buf.readUInt32LE(0);
+}
+
+function decodeFloatLE(intValue) {
+  const buf = Buffer.alloc(4);
+  buf.writeUInt32LE(intValue, 0);
+  return buf.readFloatLE(0);
+}
+
 // Connect and subscribe to topic
-client.on('connect', () => {
-  console.log('MQTT connected');
-  client.subscribe('/application/out/+', (err) => {
-    if (err) console.log('Subscribe error:', err);
-    else console.log('Subscribed to /application/out/+');
+client.on("connect", () => {
+  console.log("MQTT connected");
+  client.subscribe("/application/out/+", (err) => {
+    if (err) console.log("Subscribe error:", err);
+    else console.log("Subscribed to /application/out/+");
   });
 });
 
 // Handle incoming MQTT messages
-client.on('message', async (topic, message) => {
+client.on("message", async (topic, message) => {
   if (!running) return;
 
   try {
     const payload = JSON.parse(message.toString());
     const { uid, fw, tts, data } = payload;
 
-    // --- SCALE RAW SENSOR VALUES ---
-    const temp = data.temp / 10000000;   // Temperature in °C
-    const hum = data.hum / 100000000;    // Humidity in %
-    const pm25 = data.pm25 / 100;        // PM2.5 in µg/m³
+    // --- Decode raw float values ---
+    const temp = decodeFloatLE(data.temp); // °C
+    const hum = decodeFloatLE(data.hum);   // %
+    const pm25 = decodeFloatLE(data.pm25); // µg/m³
 
     // Save or update device
     const device = await Device.findOneAndUpdate(
@@ -50,54 +63,60 @@ client.on('message', async (topic, message) => {
       hum,
       pm25,
       tts,
-      serverTs: new Date()
+      serverTs: new Date(),
     });
 
     // Emit to frontend via Socket.io
     if (io) {
-      io.emit('telemetry', {
+      io.emit("telemetry", {
         deviceUid: uid,
-        telemetry: { temp, hum, pm25, tts, serverTs: telemetry.serverTs }
+        telemetry: { temp, hum, pm25, tts, serverTs: telemetry.serverTs },
       });
     }
 
-    console.log('Telemetry saved & emitted:', { uid, temp, hum, pm25 });
+    console.log("Telemetry saved & emitted:", { uid, temp, hum, pm25 });
   } catch (err) {
-    console.error('MQTT message error:', err);
+    console.error("MQTT message error:", err);
   }
 });
 
-// --- Test publisher with random variation ---
+// --- Test publisher with realistic floats ---
 function startTestPublisher() {
   if (interval) return;
 
   interval = setInterval(() => {
-    const DEVICE_UID = '123456';
-    const baseTemp = 528857921;
-    const baseHum = 1726382658;
-    const basePM25 = 16449;
+    const DEVICE_UID = "123456";
 
-    // Add small random variations
+    // Random realistic values
+    const tempVal = 20 + Math.random() * 10; // 20–30 °C
+    const humVal = 40 + Math.random() * 20;  // 40–60 %
+    const pm25Val = 5 + Math.random() * 50;  // 5–55 µg/m³
+
     const msg = {
       uid: DEVICE_UID,
-      fw: '1.0.0.0',
+      fw: "1.0.0.0",
       tts: Math.floor(Date.now() / 1000),
       data: {
-        temp: baseTemp + Math.floor(Math.random() * 50000),   // vary temp
-        hum: baseHum + Math.floor(Math.random() * 100000),    // vary hum
-        pm25: basePM25 + Math.floor(Math.random() * 1000)     // vary pm2.5
-      }
+        temp: encodeFloatLE(tempVal),
+        hum: encodeFloatLE(humVal),
+        pm25: encodeFloatLE(pm25Val),
+      },
     };
 
     client.publish(`/application/out/${DEVICE_UID}`, JSON.stringify(msg));
-    console.log('Test MQTT message published:', msg);
+    console.log("Test MQTT message published:", {
+      uid: DEVICE_UID,
+      temp: tempVal,
+      hum: humVal,
+      pm25: pm25Val,
+    });
   }, 5000);
 }
 
 // Start MQTT worker
 function start() {
   running = true;
-  console.log('MQTT worker started');
+  console.log("MQTT worker started");
   startTestPublisher(); // sends test payload
 }
 
@@ -106,7 +125,7 @@ function stop() {
   running = false;
   if (interval) clearInterval(interval);
   interval = null;
-  console.log('MQTT worker stopped');
+  console.log("MQTT worker stopped");
 }
 
 module.exports = { init, start, stop };
